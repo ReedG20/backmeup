@@ -38,10 +38,9 @@ export function useAudioRecording({
                 bytes[i] = binaryString.charCodeAt(i);
               }
               
-              if (bytes.length > 0) {
-                onAudioChunkRef.current(bytes.buffer);
-                console.log(`[Audio] Sent chunk: ${bytes.length} bytes`);
-              }
+                  if (bytes.length > 0) {
+                    onAudioChunkRef.current(bytes.buffer);
+                  }
             } catch (error) {
               console.error('[Audio] Error processing audio stream:', error);
             }
