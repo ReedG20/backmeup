@@ -11,7 +11,7 @@ interface UseAudioRecordingOptions {
 
 export function useAudioRecording({ 
   onAudioChunk,
-  chunkDurationMs = 1000, // Default 1 second chunks
+  chunkDurationMs = 800, // 800ms chunks to stay under AssemblyAI's 1000ms limit
 }: UseAudioRecordingOptions = {}) {
   const [recordingState, setRecordingState] = useState<RecordingState>('idle');
   const recordingRef = useRef<Audio.Recording | null>(null);
