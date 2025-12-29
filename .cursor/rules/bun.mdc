@@ -1,0 +1,4 @@
+---
+alwaysApply: true
+---
+Use bun exclusively for package management. Never use npm, yarn, or pnpm. Run dependencies with `bun install` and scripts with `bun run <script>`.
