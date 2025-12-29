@@ -64,8 +64,6 @@ export function useAssemblyAI() {
             case 'Turn':
               if (data.turn_is_formatted) {
                 console.log(`[AssemblyAI] Final transcript: ${data.transcript}`);
-              } else {
-                console.log(`[AssemblyAI] Partial transcript: ${data.transcript}`);
               }
               break;
               
