@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { Audio } from 'expo-av';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 
 type RecordingState = 'idle' | 'recording' | 'error';
 
@@ -71,7 +71,7 @@ export function useAudioRecording({
         try {
           // Read the audio file as base64
           const base64 = await FileSystem.readAsStringAsync(uri, {
-            encoding: FileSystem.EncodingType.Base64,
+            encoding: 'base64',
           });
 
           // Convert base64 to ArrayBuffer
