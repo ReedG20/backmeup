@@ -18,87 +18,104 @@ export function useAssemblyAI() {
   const wsRef = useRef<WebSocket | null>(null);
   const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected');
 
-  const connect = useCallback(() => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      console.log('[AssemblyAI] Already connected');
-      return;
-    }
-
-    console.log('[AssemblyAI] Connecting to WebSocket...');
-    setConnectionState('connecting');
-
-    const sampleRate = 16000;
-    const formatTurns = true;
-    const wsUrl = `wss://streaming.assemblyai.com/v3/ws?sample_rate=${sampleRate}&format_turns=${formatTurns}`;
-
-    // React Native WebSocket supports headers in the second parameter
-    const ws = new WebSocket(wsUrl, undefined, {
-      headers: {
-        Authorization: ASSEMBLYAI_API_KEY,
-      },
-    });
-    wsRef.current = ws;
-
-    ws.onopen = () => {
-      console.log('[AssemblyAI] WebSocket connected');
-      setConnectionState('connected');
-    };
-
-    ws.onmessage = (event) => {
-      try {
-        const data: AssemblyAIMessage = JSON.parse(event.data);
-        
-        switch (data.type) {
-          case 'Begin':
-            console.log(`[AssemblyAI] Session started: ${data.id}`);
-            console.log(`[AssemblyAI] Expires at: ${data.expires_at ? new Date(data.expires_at * 1000).toISOString() : 'unknown'}`);
-            break;
-            
-          case 'Turn':
-            if (data.turn_is_formatted) {
-              console.log(`[AssemblyAI] Final transcript: ${data.transcript}`);
-            } else {
-              console.log(`[AssemblyAI] Partial transcript: ${data.transcript}`);
-            }
-            break;
-            
-          case 'Termination':
-            console.log('[AssemblyAI] Session terminated');
-            console.log(`[AssemblyAI] Audio duration: ${data.audio_duration_seconds}s`);
-            console.log(`[AssemblyAI] Session duration: ${data.session_duration_seconds}s`);
-            break;
-            
-          case 'Error':
-            console.error('[AssemblyAI] Error:', data.error);
-            setConnectionState('error');
-            break;
-            
-          default:
-            console.log('[AssemblyAI] Unknown message type:', data);
-        }
-      } catch (error) {
-        console.error('[AssemblyAI] Failed to parse message:', error);
+  const connect = useCallback((): Promise<boolean> => {
+    return new Promise((resolve) => {
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        console.log('[AssemblyAI] Already connected');
+        resolve(true);
+        return;
       }
-    };
 
-    ws.onerror = (error) => {
-      console.error('[AssemblyAI] WebSocket error:', error);
-      setConnectionState('error');
-    };
+      console.log('[AssemblyAI] Connecting to WebSocket...');
+      setConnectionState('connecting');
 
-    ws.onclose = (event) => {
-      console.log(`[AssemblyAI] WebSocket closed: ${event.code} - ${event.reason}`);
-      setConnectionState('disconnected');
-      wsRef.current = null;
-    };
+      // WebSocket URL with turn detection parameters
+      const wsUrl = `wss://streaming.assemblyai.com/v3/ws?` +
+        `sample_rate=16000` +
+        `&format_turns=true` +
+        `&end_of_turn_confidence_threshold=0.8` +        // Higher = more confident before finalizing
+        `&min_end_of_turn_silence_when_confident=500` +  // Min silence (ms) to end turn
+        `&max_turn_silence=2000`;                        // Max silence (ms) before forcing turn end
+
+      // React Native WebSocket supports headers in the second parameter
+      const ws = new WebSocket(wsUrl, undefined, {
+        headers: {
+          Authorization: ASSEMBLYAI_API_KEY,
+        },
+      });
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        console.log('[AssemblyAI] WebSocket connected');
+        setConnectionState('connected');
+        resolve(true);
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data: AssemblyAIMessage = JSON.parse(event.data);
+          
+          switch (data.type) {
+            case 'Begin':
+              console.log(`[AssemblyAI] Session started: ${data.id}`);
+              console.log(`[AssemblyAI] Expires at: ${data.expires_at ? new Date(data.expires_at * 1000).toISOString() : 'unknown'}`);
+              break;
+              
+            case 'Turn':
+              if (data.turn_is_formatted) {
+                console.log(`[AssemblyAI] Final transcript: ${data.transcript}`);
+              } else {
+                console.log(`[AssemblyAI] Partial transcript: ${data.transcript}`);
+              }
+              break;
+              
+            case 'Termination':
+              console.log('[AssemblyAI] Session terminated');
+              console.log(`[AssemblyAI] Audio duration: ${data.audio_duration_seconds}s`);
+              console.log(`[AssemblyAI] Session duration: ${data.session_duration_seconds}s`);
+              break;
+              
+            case 'Error':
+              console.error('[AssemblyAI] Error:', data.error);
+              setConnectionState('error');
+              break;
+              
+            default:
+              console.log('[AssemblyAI] Unknown message type:', data);
+          }
+        } catch (error) {
+          console.error('[AssemblyAI] Failed to parse message:', error);
+        }
+      };
+
+      ws.onerror = (error) => {
+        console.error('[AssemblyAI] WebSocket error:', error);
+        setConnectionState('error');
+        resolve(false);
+      };
+
+      ws.onclose = (event) => {
+        console.log(`[AssemblyAI] WebSocket closed: ${event.code} - ${event.reason}`);
+        setConnectionState('disconnected');
+        wsRef.current = null;
+      };
+
+      // Timeout after 10 seconds
+      setTimeout(() => {
+        if (wsRef.current?.readyState !== WebSocket.OPEN) {
+          console.error('[AssemblyAI] Connection timeout');
+          setConnectionState('error');
+          resolve(false);
+        }
+      }, 10000);
+    });
   }, []);
 
   const sendAudio = useCallback((audioData: ArrayBuffer) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(audioData);
-    } else {
-      console.warn('[AssemblyAI] Cannot send audio: WebSocket not connected');
     }
+    // Silently ignore if not connected - prevents log spam
   }, []);
 
   const disconnect = useCallback(() => {
@@ -127,4 +144,3 @@ export function useAssemblyAI() {
     disconnect,
   };
 }
-

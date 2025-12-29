@@ -22,11 +22,29 @@ export default function RecordScreen() {
       disconnect();
       setIsRecording(false);
     } else {
-      // Start recording
+      // Start recording - first connect to WebSocket, then start audio
       console.log('[App] Starting recording...');
       setIsRecording(true);
-      connect();
-      await startRecording();
+      
+      // Wait for WebSocket to connect
+      console.log('[App] Connecting to AssemblyAI...');
+      const connected = await connect();
+      
+      if (!connected) {
+        console.error('[App] Failed to connect to AssemblyAI');
+        setIsRecording(false);
+        return;
+      }
+      
+      // Now start recording
+      console.log('[App] WebSocket connected, starting audio recording...');
+      const started = await startRecording();
+      
+      if (!started) {
+        console.error('[App] Failed to start recording');
+        disconnect();
+        setIsRecording(false);
+      }
     }
   };
 

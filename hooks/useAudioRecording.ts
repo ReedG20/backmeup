@@ -1,168 +1,133 @@
-import { useState, useRef, useCallback } from 'react';
-import { Audio } from 'expo-av';
-import * as FileSystem from 'expo-file-system/legacy';
+import { useState, useRef, useCallback, useEffect } from 'react';
+import LiveAudioStream from 'react-native-live-audio-stream';
+import { Buffer } from 'buffer';
+import { PermissionsAndroid, Platform } from 'react-native';
 
 type RecordingState = 'idle' | 'recording' | 'error';
 
 interface UseAudioRecordingOptions {
   onAudioChunk?: (audioData: ArrayBuffer) => void;
-  chunkDurationMs?: number; // Duration of each recording chunk in milliseconds
+}
+
+// Audio configuration for AssemblyAI compatibility
+const AUDIO_CONFIG = {
+  sampleRate: 16000,    // Required by AssemblyAI
+  channels: 1,          // Mono
+  bitsPerSample: 16,    // PCM16
+  audioSource: 6,       // Voice recognition (Android only)
+  bufferSize: 4096,     // ~256ms chunks at 16kHz mono 16-bit
+};
+
+async function requestMicrophonePermission(): Promise<boolean> {
+  if (Platform.OS === 'android') {
+    try {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.RECORD_AUDIO
+      );
+      return granted === PermissionsAndroid.RESULTS.GRANTED;
+    } catch (err) {
+      console.error('[Audio] Permission request failed:', err);
+      return false;
+    }
+  }
+  // iOS handles permission via Info.plist - the system prompts automatically
+  return true;
 }
 
 export function useAudioRecording({ 
   onAudioChunk,
-  chunkDurationMs = 800, // 800ms chunks to stay under AssemblyAI's 1000ms limit
 }: UseAudioRecordingOptions = {}) {
   const [recordingState, setRecordingState] = useState<RecordingState>('idle');
-  const recordingRef = useRef<Audio.Recording | null>(null);
-  const isRecordingActiveRef = useRef(false);
-  const lastChunkSizeRef = useRef(0);
+  const onAudioChunkRef = useRef(onAudioChunk);
+  const isInitializedRef = useRef(false);
+  const isRecordingRef = useRef(false);
 
-  // Chunked recording: record for a short duration, then stop, read, and restart
-  const recordChunk = useCallback(async () => {
-    if (!isRecordingActiveRef.current) {
-      return;
-    }
+  // Keep the callback ref up to date
+  useEffect(() => {
+    onAudioChunkRef.current = onAudioChunk;
+  }, [onAudioChunk]);
 
-    try {
-      // Create a new recording
-      const { recording } = await Audio.Recording.createAsync({
-        isMeteringEnabled: false,
-        android: {
-          extension: '.wav',
-          outputFormat: Audio.AndroidOutputFormat.DEFAULT,
-          audioEncoder: Audio.AndroidAudioEncoder.DEFAULT,
-          sampleRate: 16000,
-          numberOfChannels: 1,
-          bitRate: 256000,
-        },
-        ios: {
-          extension: '.wav',
-          outputFormat: Audio.IOSOutputFormat.LINEARPCM,
-          audioQuality: Audio.IOSAudioQuality.HIGH,
-          sampleRate: 16000,
-          numberOfChannels: 1,
-          bitRate: 256000,
-          linearPCMBitDepth: 16,
-          linearPCMIsBigEndian: false,
-          linearPCMIsFloat: false,
-        },
-        web: {
-          mimeType: 'audio/wav',
-          bitsPerSecond: 256000,
-        },
-      });
+  // Initialize LiveAudioStream once
+  useEffect(() => {
+    if (isInitializedRef.current) return;
 
-      recordingRef.current = recording;
+    console.log('[Audio] Initializing LiveAudioStream...');
+    console.log(`[Audio] Config: ${JSON.stringify(AUDIO_CONFIG)}`);
+    
+    LiveAudioStream.init(AUDIO_CONFIG);
+    isInitializedRef.current = true;
 
-      // Wait for the chunk duration
-      await new Promise(resolve => setTimeout(resolve, chunkDurationMs));
-
-      if (!isRecordingActiveRef.current) {
-        await recording.stopAndUnloadAsync();
+    // Set up the continuous audio data callback
+    LiveAudioStream.on('data', (base64Data: string) => {
+      // Only process if we're actively recording and have a callback
+      if (!isRecordingRef.current || !onAudioChunkRef.current) {
+        return;
+      }
+      
+      if (!base64Data || base64Data.length === 0) {
+        console.warn('[Audio] Received empty audio data');
         return;
       }
 
-      // Stop the recording
-      await recording.stopAndUnloadAsync();
-      const uri = recording.getURI();
-
-      if (uri && onAudioChunk) {
-        try {
-          // Read the audio file as base64
-          const base64 = await FileSystem.readAsStringAsync(uri, {
-            encoding: 'base64',
-          });
-
-          // Convert base64 to ArrayBuffer
-          const binaryString = atob(base64);
-          const bytes = new Uint8Array(binaryString.length);
-          for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-          }
-
-          // WAV files have a 44-byte header, skip it to send raw PCM data
-          // AssemblyAI expects raw PCM audio, not WAV
-          const WAV_HEADER_SIZE = 44;
-          const pcmData = bytes.slice(WAV_HEADER_SIZE);
-          
-          // Only send if we have actual audio data
-          if (pcmData.length > 0) {
-            onAudioChunk(pcmData.buffer);
-            lastChunkSizeRef.current = pcmData.length;
-            console.log(`[Audio] Sent PCM chunk: ${pcmData.length} bytes`);
-          }
-
-          // Clean up the temporary file
-          await FileSystem.deleteAsync(uri, { idempotent: true });
-        } catch (error) {
-          console.error('[Audio] Error processing chunk:', error);
+      try {
+        // Convert base64 to ArrayBuffer
+        const audioBuffer = Buffer.from(base64Data, 'base64');
+        
+        if (audioBuffer.length > 0) {
+          onAudioChunkRef.current(audioBuffer.buffer);
+          console.log(`[Audio] Sent chunk: ${audioBuffer.length} bytes`);
         }
+      } catch (error) {
+        console.error('[Audio] Error processing audio data:', error);
       }
+    });
 
-      // Continue recording next chunk
-      if (isRecordingActiveRef.current) {
-        // Use setImmediate or setTimeout to avoid blocking
-        setTimeout(() => recordChunk(), 0);
-      }
-    } catch (error) {
-      console.error('[Audio] Error in recordChunk:', error);
-      if (isRecordingActiveRef.current) {
-        // Try to continue despite the error
-        setTimeout(() => recordChunk(), 100);
-      }
-    }
-  }, [chunkDurationMs, onAudioChunk]);
+    return () => {
+      // Cleanup on unmount
+      isRecordingRef.current = false;
+      LiveAudioStream.stop();
+    };
+  }, []);
 
   const startRecording = useCallback(async () => {
     try {
-      console.log('[Audio] Requesting permissions...');
-      const permission = await Audio.requestPermissionsAsync();
+      console.log('[Audio] Requesting microphone permission...');
+      const hasPermission = await requestMicrophonePermission();
       
-      if (!permission.granted) {
-        console.error('[Audio] Permission denied');
+      if (!hasPermission) {
+        console.error('[Audio] Microphone permission denied');
         setRecordingState('error');
-        return;
+        return false;
       }
-
-      console.log('[Audio] Setting audio mode...');
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-      });
-
-      console.log('[Audio] Starting chunked recording...');
-      console.log(`[Audio] Chunk duration: ${chunkDurationMs}ms`);
-      isRecordingActiveRef.current = true;
+      
+      console.log('[Audio] Permission granted, starting continuous recording...');
+      
+      // Re-initialize before starting (fixes some iOS issues)
+      LiveAudioStream.init(AUDIO_CONFIG);
+      
+      isRecordingRef.current = true;
+      LiveAudioStream.start();
       setRecordingState('recording');
       
-      // Start the chunked recording loop
-      recordChunk();
-
+      console.log('[Audio] Recording started - streaming continuously');
+      return true;
     } catch (error) {
       console.error('[Audio] Failed to start recording:', error);
       setRecordingState('error');
-      isRecordingActiveRef.current = false;
+      isRecordingRef.current = false;
+      return false;
     }
-  }, [chunkDurationMs, recordChunk]);
+  }, []);
 
   const stopRecording = useCallback(async () => {
     try {
       console.log('[Audio] Stopping recording...');
-      isRecordingActiveRef.current = false;
-
-      if (recordingRef.current) {
-        try {
-          await recordingRef.current.stopAndUnloadAsync();
-        } catch (error) {
-          console.warn('[Audio] Error stopping recording (may already be stopped):', error);
-        }
-        recordingRef.current = null;
-      }
-
+      
+      isRecordingRef.current = false;
+      LiveAudioStream.stop();
       setRecordingState('idle');
+      
       console.log('[Audio] Recording stopped');
-      console.log(`[Audio] Last chunk size: ${lastChunkSizeRef.current} bytes`);
     } catch (error) {
       console.error('[Audio] Failed to stop recording:', error);
       setRecordingState('error');

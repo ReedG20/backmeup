@@ -27,15 +27,18 @@
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.myexpoapp.transcription",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "This app needs access to your microphone for real-time transcription."
       }
     },
     "android": {
+      "package": "com.myexpoapp.transcription",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "permissions": ["android.permission.RECORD_AUDIO"]
     }
   }
 }
