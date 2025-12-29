@@ -29,13 +29,10 @@ export function useAssemblyAI() {
       console.log('[AssemblyAI] Connecting to WebSocket...');
       setConnectionState('connecting');
 
-      // WebSocket URL with turn detection parameters
+      // WebSocket URL with default turn detection
       const wsUrl = `wss://streaming.assemblyai.com/v3/ws?` +
         `sample_rate=16000` +
-        `&format_turns=true` +
-        `&end_of_turn_confidence_threshold=0.8` +        // Higher = more confident before finalizing
-        `&min_end_of_turn_silence_when_confident=500` +  // Min silence (ms) to end turn
-        `&max_turn_silence=2000`;                        // Max silence (ms) before forcing turn end
+        `&format_turns=true`;
 
       // React Native WebSocket supports headers in the second parameter
       const ws = new WebSocket(wsUrl, undefined, {
