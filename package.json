@@ -15,6 +15,8 @@
   },
   "dependencies": {
     "@expo/ui": "^0.2.0-beta.9",
+    "@hugeicons/core-free-icons": "^3.1.1",
+    "@hugeicons/react-native": "^1.0.10",
     "@siteed/expo-audio-studio": "^2.18.1",
     "@supabase/supabase-js": "^2.89.0",
     "buffer": "^6.0.3",

@@ -1,6 +1,8 @@
 import { View, Text, Pressable, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { HugeiconsIcon } from '@hugeicons/react-native';
+import { PlayIcon } from '@hugeicons/core-free-icons';
 import { useRecordingSession } from '../hooks/useRecordingSession';
 import { useAudioRecording } from '../hooks/useAudioRecording';
 
@@ -35,8 +37,8 @@ export default function RecordScreen() {
   const isTransitioning = state === 'starting' || state === 'stopping';
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
-      <View className="flex-1 px-8">
+    <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
+      <View className="flex-1 px-8 pb-24">
         {/* Header area */}
         <View className="pt-8 pb-8">
           <Text className="text-3xl font-bold text-gray-900">
@@ -78,7 +80,7 @@ export default function RecordScreen() {
                 <Pressable
                   onPress={handleEndSession}
                   disabled={isTransitioning}
-                  className={`w-full rounded-2xl px-8 py-5 ${
+                  className={`w-full rounded-full px-8 py-5 ${
                     isTransitioning ? 'bg-gray-400' : 'bg-red-500 active:bg-red-600'
                   }`}
                 >
@@ -93,11 +95,12 @@ export default function RecordScreen() {
               <Pressable
                 onPress={handleStartSession}
                 disabled={isTransitioning}
-                className={`w-full rounded-2xl px-8 py-5 ${
-                  isTransitioning ? 'bg-gray-400' : 'bg-blue-500 active:bg-blue-600'
+                className={`w-full flex-row items-center justify-center rounded-full px-8 py-5 ${
+                  isTransitioning ? 'bg-gray-400' : 'bg-[#4b04ff]'
                 }`}
               >
-                <Text className="text-center text-xl font-semibold text-white">
+                {!isTransitioning && <HugeiconsIcon icon={PlayIcon} size={24} color="white" strokeWidth={2} />}
+                <Text className="text-center text-xl font-semibold text-white ml-3">
                   {isTransitioning ? 'Starting...' : 'Start Session'}
                 </Text>
               </Pressable>
