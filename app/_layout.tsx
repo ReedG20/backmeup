@@ -10,7 +10,7 @@ export default function Layout() {
         <Label>Record</Label>
       </NativeTabs.Trigger>
       
-      <NativeTabs.Trigger name="sessions">
+      <NativeTabs.Trigger name="(sessions)">
         <Icon src={require('../assets/icons/menu-square-Stroke-Rounded.png')} />
         <Label>Sessions</Label>
       </NativeTabs.Trigger>
