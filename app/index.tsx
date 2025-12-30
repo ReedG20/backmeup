@@ -1,10 +1,21 @@
+import { useEffect } from 'react';
 import { View, Text, Pressable, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import { PlayIcon } from '@hugeicons/core-free-icons';
+import * as Notifications from 'expo-notifications';
 import { useRecordingSession } from '../hooks/useRecordingSession';
 import { useAudioRecording } from '../hooks/useAudioRecording';
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldPlaySound: false,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
 
 export default function RecordScreen() {
   const router = useRouter();
@@ -15,10 +26,24 @@ export default function RecordScreen() {
     onAudioChunk: sendAudio,
   });
 
+  useEffect(() => {
+    Notifications.requestPermissionsAsync();
+  }, []);
+
   const handleStartSession = async () => {
     const sessionId = await startSession();
     if (sessionId) {
       console.log('Session started:', sessionId);
+
+      // Show notification that session has started
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: 'Session Started',
+          body: 'Your recording session is now active.',
+        },
+        trigger: null,
+      });
+
       // Start audio recording after session is created
       await startRecording();
     }
