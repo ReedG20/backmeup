@@ -72,19 +72,14 @@ export default function SessionDetailScreen() {
               </Text>
             </View>
           ) : (
-            <View className="overflow-hidden rounded-xl bg-white">
+            <View className="overflow-hidden rounded-xl bg-white px-4 py-4">
               {session.turns.map((turn, index) => (
-                <View
+                <Text
                   key={turn.id}
-                  className={`px-4 py-3 ${index !== session.turns.length - 1 ? 'border-b border-gray-100' : ''}`}
+                  className={`text-base leading-relaxed text-gray-800 ${index !== session.turns.length - 1 ? 'mb-4' : ''}`}
                 >
-                  <Text className="mb-1 text-xs text-gray-400">
-                    Turn {turn.turn_order}
-                  </Text>
-                  <Text className="text-base leading-relaxed text-gray-800">
-                    {turn.transcript}
-                  </Text>
-                </View>
+                  {turn.transcript}
+                </Text>
               ))}
             </View>
           )}
