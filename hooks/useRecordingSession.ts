@@ -1,7 +1,7 @@
 import { useRef, useCallback, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { ASSEMBLYAI_API_KEY } from '../lib/config';
-import type { Session, Turn } from '../lib/database.types';
+import { ASSEMBLYAI_API_KEY, SUPABASE_URL, SUPABASE_ANON_KEY } from '../lib/config';
+import type { Session, Turn, Insight } from '../lib/database.types';
 
 type RecordingState = 'idle' | 'starting' | 'recording' | 'stopping' | 'error';
 
@@ -20,6 +20,7 @@ interface UseRecordingSessionResult {
   state: RecordingState;
   currentSession: Session | null;
   turns: Turn[];
+  insights: Insight[];
   error: string | null;
   startSession: (title?: string) => Promise<string | null>;
   endSession: () => Promise<void>;
@@ -27,11 +28,49 @@ interface UseRecordingSessionResult {
   sendManualTurn: (transcript: string) => Promise<void>;
 }
 
+async function generateInsight(
+  sessionId: string,
+  triggerTurnId: string
+): Promise<Insight | null> {
+  try {
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/generate-insight`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({
+        session_id: sessionId,
+        trigger_turn_id: triggerTurnId,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error('[RecordingSession] Insight generation failed:', response.status);
+      return null;
+    }
+
+    const data = await response.json();
+
+    if (data.insight) {
+      console.log('[RecordingSession] Insight generated:', data.insight.title);
+      return data.insight;
+    }
+
+    console.log('[RecordingSession] No insight generated:', data.reason);
+    return null;
+  } catch (err) {
+    console.error('[RecordingSession] Error generating insight:', err);
+    return null;
+  }
+}
+
 export function useRecordingSession(): UseRecordingSessionResult {
   const wsRef = useRef<WebSocket | null>(null);
   const [state, setState] = useState<RecordingState>('idle');
   const [currentSession, setCurrentSession] = useState<Session | null>(null);
   const [turns, setTurns] = useState<Turn[]>([]);
+  const [insights, setInsights] = useState<Insight[]>([]);
   const [error, setError] = useState<string | null>(null);
   const turnCountRef = useRef(0);
 
@@ -39,6 +78,7 @@ export function useRecordingSession(): UseRecordingSessionResult {
     setState('starting');
     setError(null);
     setTurns([]);
+    setInsights([]);
     turnCountRef.current = 0;
 
     // Create session in database
@@ -109,6 +149,13 @@ export function useRecordingSession(): UseRecordingSessionResult {
                 console.error('[RecordingSession] Failed to save turn:', turnError);
               } else if (turnData) {
                 setTurns((prev) => [...prev, turnData]);
+
+                // Trigger insight generation (fire and forget, don't block)
+                generateInsight(sessionData.id, turnData.id).then((insight) => {
+                  if (insight) {
+                    setInsights((prev) => [...prev, insight]);
+                  }
+                });
               }
             }
             break;
@@ -188,53 +235,64 @@ export function useRecordingSession(): UseRecordingSessionResult {
     }
   }, []);
 
-  const sendManualTurn = useCallback(async (transcript: string) => {
-    // Guard: only allow when session is active and recording
-    if (!currentSession || state !== 'recording') {
-      console.warn('[RecordingSession] Cannot send manual turn: no active session');
-      return;
-    }
-
-    // Guard: reject empty input
-    if (!transcript.trim()) {
-      console.warn('[RecordingSession] Cannot send empty manual turn');
-      return;
-    }
-
-    try {
-      // Increment turn counter
-      turnCountRef.current += 1;
-
-      // Save to database (identical to AssemblyAI turn handler)
-      const { data: turnData, error: turnError } = await supabase
-        .from('turns')
-        .insert({
-          session_id: currentSession.id,
-          transcript: transcript.trim(),
-          turn_order: turnCountRef.current,
-          is_formatted: true,
-        })
-        .select()
-        .single();
-
-      // Update local state if successful
-      if (turnError) {
-        console.error('[RecordingSession] Failed to save manual turn:', turnError);
-        setError('Failed to save manual turn');
-      } else if (turnData) {
-        console.log('[RecordingSession] Manual turn saved:', turnData);
-        setTurns((prev) => [...prev, turnData]);
+  const sendManualTurn = useCallback(
+    async (transcript: string) => {
+      // Guard: only allow when session is active and recording
+      if (!currentSession || state !== 'recording') {
+        console.warn('[RecordingSession] Cannot send manual turn: no active session');
+        return;
       }
-    } catch (err) {
-      console.error('[RecordingSession] Error sending manual turn:', err);
-      setError('Error sending manual turn');
-    }
-  }, [currentSession, state]);
+
+      // Guard: reject empty input
+      if (!transcript.trim()) {
+        console.warn('[RecordingSession] Cannot send empty manual turn');
+        return;
+      }
+
+      try {
+        // Increment turn counter
+        turnCountRef.current += 1;
+
+        // Save to database (identical to AssemblyAI turn handler)
+        const { data: turnData, error: turnError } = await supabase
+          .from('turns')
+          .insert({
+            session_id: currentSession.id,
+            transcript: transcript.trim(),
+            turn_order: turnCountRef.current,
+            is_formatted: true,
+          })
+          .select()
+          .single();
+
+        // Update local state if successful
+        if (turnError) {
+          console.error('[RecordingSession] Failed to save manual turn:', turnError);
+          setError('Failed to save manual turn');
+        } else if (turnData) {
+          console.log('[RecordingSession] Manual turn saved:', turnData);
+          setTurns((prev) => [...prev, turnData]);
+
+          // Trigger insight generation (fire and forget, don't block)
+          generateInsight(currentSession.id, turnData.id).then((insight) => {
+            if (insight) {
+              setInsights((prev) => [...prev, insight]);
+            }
+          });
+        }
+      } catch (err) {
+        console.error('[RecordingSession] Error sending manual turn:', err);
+        setError('Error sending manual turn');
+      }
+    },
+    [currentSession, state]
+  );
 
   return {
     state,
     currentSession,
     turns,
+    insights,
     error,
     startSession,
     endSession,
@@ -242,4 +300,3 @@ export function useRecordingSession(): UseRecordingSessionResult {
     sendManualTurn,
   };
 }
-

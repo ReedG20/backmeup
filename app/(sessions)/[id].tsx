@@ -1,11 +1,62 @@
-import { View, Text, ScrollView, ActivityIndicator } from 'react-native';
+import { useState } from 'react';
+import { View, Text, ScrollView, ActivityIndicator, Pressable } from 'react-native';
 import { useLocalSearchParams, Stack } from 'expo-router';
-import { useSession } from '../../hooks/useSession';
+import { useSession, TimelineItem } from '../../hooks/useSession';
 import { formatDate, formatDuration } from '../../hooks/useSessions';
+import type { Insight } from '../../lib/database.types';
+
+function InsightCard({ insight }: { insight: Insight }) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <Pressable onPress={() => setExpanded(!expanded)}>
+      <View className="overflow-hidden rounded-xl border border-amber-200 bg-amber-50">
+        {/* Header */}
+        <View className="flex-row items-center px-4 py-3">
+          <View className="mr-3 h-2 w-2 rounded-full bg-amber-500" />
+          <View className="flex-1">
+            <Text className="text-sm font-semibold text-amber-900">{insight.title}</Text>
+            <Text className="mt-0.5 text-sm text-amber-700">{insight.notification_body}</Text>
+          </View>
+          <Text className="text-xs text-amber-500">{expanded ? '▲' : '▼'}</Text>
+        </View>
+
+        {/* Expanded content */}
+        {expanded && (
+          <View className="border-t border-amber-200 bg-white px-4 py-3">
+            <Text className="text-sm leading-relaxed text-gray-700">{insight.expanded_body}</Text>
+          </View>
+        )}
+      </View>
+    </Pressable>
+  );
+}
+
+function TimelineItemView({
+  item,
+  isLast,
+}: {
+  item: TimelineItem;
+  isLast: boolean;
+}) {
+  if (item.type === 'turn') {
+    return (
+      <View className={`overflow-hidden rounded-xl bg-white px-4 py-4 ${!isLast ? 'mb-3' : ''}`}>
+        <Text className="text-base leading-relaxed text-gray-800">{item.data.transcript}</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View className={!isLast ? 'mb-3' : ''}>
+      <InsightCard insight={item.data} />
+    </View>
+  );
+}
 
 export default function SessionDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { session, loading, error } = useSession(id);
+  const { session, timeline, loading, error } = useSession(id);
 
   if (loading) {
     return (
@@ -33,9 +84,7 @@ export default function SessionDetailScreen() {
           }}
         />
         <View className="flex-1 items-center justify-center bg-gray-50 px-8">
-          <Text className="text-center text-red-500">
-            {error || 'Session not found'}
-          </Text>
+          <Text className="text-center text-red-500">{error || 'Session not found'}</Text>
         </View>
       </>
     );
@@ -60,26 +109,23 @@ export default function SessionDetailScreen() {
           </Text>
         </View>
 
-        {/* Turns Section */}
+        {/* Timeline Section */}
         <View className="px-4 pt-2">
           <Text className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
-            Transcript
+            Timeline
           </Text>
-          {session.turns.length === 0 ? (
+          {timeline.length === 0 ? (
             <View className="overflow-hidden rounded-xl bg-white px-4 py-6">
-              <Text className="text-center text-gray-400">
-                No transcript available
-              </Text>
+              <Text className="text-center text-gray-400">No content available</Text>
             </View>
           ) : (
-            <View className="overflow-hidden rounded-xl bg-white px-4 py-4">
-              {session.turns.map((turn, index) => (
-                <Text
-                  key={turn.id}
-                  className={`text-base leading-relaxed text-gray-800 ${index !== session.turns.length - 1 ? 'mb-4' : ''}`}
-                >
-                  {turn.transcript}
-                </Text>
+            <View>
+              {timeline.map((item, index) => (
+                <TimelineItemView
+                  key={item.type === 'turn' ? `turn-${item.data.id}` : `insight-${item.data.id}`}
+                  item={item}
+                  isLast={index === timeline.length - 1}
+                />
               ))}
             </View>
           )}
