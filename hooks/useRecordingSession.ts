@@ -24,6 +24,7 @@ interface UseRecordingSessionResult {
   startSession: (title?: string) => Promise<string | null>;
   endSession: () => Promise<void>;
   sendAudio: (audioData: ArrayBuffer) => void;
+  sendManualTurn: (transcript: string) => Promise<void>;
 }
 
 export function useRecordingSession(): UseRecordingSessionResult {
@@ -187,6 +188,49 @@ export function useRecordingSession(): UseRecordingSessionResult {
     }
   }, []);
 
+  const sendManualTurn = useCallback(async (transcript: string) => {
+    // Guard: only allow when session is active and recording
+    if (!currentSession || state !== 'recording') {
+      console.warn('[RecordingSession] Cannot send manual turn: no active session');
+      return;
+    }
+
+    // Guard: reject empty input
+    if (!transcript.trim()) {
+      console.warn('[RecordingSession] Cannot send empty manual turn');
+      return;
+    }
+
+    try {
+      // Increment turn counter
+      turnCountRef.current += 1;
+
+      // Save to database (identical to AssemblyAI turn handler)
+      const { data: turnData, error: turnError } = await supabase
+        .from('turns')
+        .insert({
+          session_id: currentSession.id,
+          transcript: transcript.trim(),
+          turn_order: turnCountRef.current,
+          is_formatted: true,
+        })
+        .select()
+        .single();
+
+      // Update local state if successful
+      if (turnError) {
+        console.error('[RecordingSession] Failed to save manual turn:', turnError);
+        setError('Failed to save manual turn');
+      } else if (turnData) {
+        console.log('[RecordingSession] Manual turn saved:', turnData);
+        setTurns((prev) => [...prev, turnData]);
+      }
+    } catch (err) {
+      console.error('[RecordingSession] Error sending manual turn:', err);
+      setError('Error sending manual turn');
+    }
+  }, [currentSession, state]);
+
   return {
     state,
     currentSession,
@@ -195,6 +239,7 @@ export function useRecordingSession(): UseRecordingSessionResult {
     startSession,
     endSession,
     sendAudio,
+    sendManualTurn,
   };
 }
 

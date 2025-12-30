@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { View, Text, Pressable, ScrollView } from 'react-native';
+import { useEffect, useState } from 'react';
+import { View, Text, Pressable, ScrollView, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { HugeiconsIcon } from '@hugeicons/react-native';
@@ -19,12 +19,14 @@ Notifications.setNotificationHandler({
 
 export default function RecordScreen() {
   const router = useRouter();
-  const { state, currentSession, turns, error, startSession, endSession, sendAudio } =
+  const { state, currentSession, turns, error, startSession, endSession, sendAudio, sendManualTurn } =
     useRecordingSession();
 
   const { startRecording, stopRecording } = useAudioRecording({
     onAudioChunk: sendAudio,
   });
+
+  const [manualTurnText, setManualTurnText] = useState('');
 
   useEffect(() => {
     Notifications.requestPermissionsAsync();
@@ -56,6 +58,13 @@ export default function RecordScreen() {
     await endSession();
     // Navigate to sessions list after ending
     router.push('/(sessions)');
+  };
+
+  const handleSendManualTurn = async () => {
+    if (manualTurnText.trim()) {
+      await sendManualTurn(manualTurnText);
+      setManualTurnText(''); // Clear input
+    }
   };
 
   const isRecording = state === 'recording';
@@ -100,7 +109,16 @@ export default function RecordScreen() {
                   ))
                 )}
               </ScrollView>
-              
+
+              <TextInput
+                className="mb-4 rounded-lg border border-gray-300 px-4 py-3"
+                placeholder="Type a turn..."
+                value={manualTurnText}
+                onChangeText={setManualTurnText}
+                onSubmitEditing={handleSendManualTurn}
+                returnKeyType="send"
+              />
+
               <View className="pb-4">
                 <Pressable
                   onPress={handleEndSession}
