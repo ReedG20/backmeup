@@ -193,6 +193,8 @@ Generate an insight based on the conversation. The insight should be one of:
 - A logical fallacy identification
 - Relevant context or background information
 
+If previous insights are shown in the context, DO NOT repeat or rephrase the same information. Focus only on NEW claims or arguments that haven't been addressed yet.
+
 Keep it concise and immediately useful. The user needs to quickly glance at this and get value.
 
 Respond with ONLY a JSON object in this exact format:
