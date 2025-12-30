@@ -11,7 +11,8 @@
     "web": "expo start --web",
     "db:start": "supabase start",
     "db:stop": "supabase stop",
-    "db:types": "supabase gen types typescript --local > lib/database.types.ts"
+    "db:types": "supabase gen types typescript --local > lib/database.types.ts",
+    "functions:serve": "supabase functions serve --env-file .env"
   },
   "dependencies": {
     "@expo/ui": "^0.2.0-beta.9",
