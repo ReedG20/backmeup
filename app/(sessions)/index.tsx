@@ -1,11 +1,19 @@
+import { useCallback } from 'react';
 import { View, Text, Platform, Pressable, ScrollView, ActivityIndicator } from 'react-native';
 import { List, Section, Button, Host } from '@expo/ui/swift-ui';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useSessions, formatDate, formatDuration } from '../../hooks/useSessions';
 
 export default function SessionsListScreen() {
   const router = useRouter();
-  const { sessions, loading, error } = useSessions();
+  const { sessions, loading, error, refetch } = useSessions();
+
+  // Refetch sessions when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch])
+  );
 
   const handleSessionPress = (sessionId: string) => {
     router.push(`/(sessions)/${sessionId}`);
