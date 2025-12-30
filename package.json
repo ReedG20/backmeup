@@ -8,11 +8,15 @@
     "prebuild": "expo prebuild",
     "lint": "eslint \"**/*.{js,jsx,ts,tsx}\" && prettier -c \"**/*.{js,jsx,ts,tsx,json}\"",
     "format": "eslint \"**/*.{js,jsx,ts,tsx}\" --fix && prettier \"**/*.{js,jsx,ts,tsx,json}\" --write",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "db:start": "supabase start",
+    "db:stop": "supabase stop",
+    "db:types": "supabase gen types typescript --local > lib/database.types.ts"
   },
   "dependencies": {
     "@expo/ui": "^0.2.0-beta.9",
     "@siteed/expo-audio-studio": "^2.18.1",
+    "@supabase/supabase-js": "^2.89.0",
     "buffer": "^6.0.3",
     "expo": "^54.0.0",
     "expo-constants": "^18.0.12",
