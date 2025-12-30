@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { View, Text, Pressable, ScrollView, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -7,6 +7,7 @@ import { PlayIcon } from '@hugeicons/core-free-icons';
 import * as Notifications from 'expo-notifications';
 import { useRecordingSession } from '../hooks/useRecordingSession';
 import { useAudioRecording } from '../hooks/useAudioRecording';
+import type { Turn, Insight } from '../lib/database.types';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -17,10 +18,47 @@ Notifications.setNotificationHandler({
   }),
 });
 
+type TimelineItem =
+  | { type: 'turn'; data: Turn }
+  | { type: 'insight'; data: Insight };
+
+function InsightCard({ insight }: { insight: Insight }) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <Pressable onPress={() => setExpanded(!expanded)}>
+      <View className="overflow-hidden rounded-xl border border-amber-200 bg-amber-50">
+        <View className="flex-row items-center px-4 py-3">
+          <View className="mr-3 h-2 w-2 rounded-full bg-amber-500" />
+          <View className="flex-1">
+            <Text className="text-sm font-semibold text-amber-900">{insight.title}</Text>
+            <Text className="mt-0.5 text-sm text-amber-700">{insight.notification_body}</Text>
+          </View>
+          <Text className="text-xs text-amber-500">{expanded ? '▲' : '▼'}</Text>
+        </View>
+        {expanded && (
+          <View className="border-t border-amber-200 bg-white px-4 py-3">
+            <Text className="text-sm leading-relaxed text-gray-700">{insight.expanded_body}</Text>
+          </View>
+        )}
+      </View>
+    </Pressable>
+  );
+}
+
 export default function RecordScreen() {
   const router = useRouter();
-  const { state, currentSession, turns, error, startSession, endSession, sendAudio, sendManualTurn } =
-    useRecordingSession();
+  const {
+    state,
+    currentSession,
+    turns,
+    insights,
+    error,
+    startSession,
+    endSession,
+    sendAudio,
+    sendManualTurn,
+  } = useRecordingSession();
 
   const { startRecording, stopRecording } = useAudioRecording({
     onAudioChunk: sendAudio,
@@ -28,9 +66,44 @@ export default function RecordScreen() {
 
   const [manualTurnText, setManualTurnText] = useState('');
 
+  // Build timeline by interleaving turns and insights
+  const timeline = useMemo((): TimelineItem[] => {
+    const items: TimelineItem[] = [];
+
+    for (const turn of turns) {
+      items.push({ type: 'turn', data: turn });
+    }
+
+    for (const insight of insights) {
+      items.push({ type: 'insight', data: insight });
+    }
+
+    items.sort((a, b) => {
+      const aTime = new Date(a.data.created_at).getTime();
+      const bTime = new Date(b.data.created_at).getTime();
+      return aTime - bTime;
+    });
+
+    return items;
+  }, [turns, insights]);
+
   useEffect(() => {
     Notifications.requestPermissionsAsync();
   }, []);
+
+  // Send notification when new insight is generated
+  useEffect(() => {
+    if (insights.length > 0) {
+      const latestInsight = insights[insights.length - 1];
+      Notifications.scheduleNotificationAsync({
+        content: {
+          title: latestInsight.title,
+          body: latestInsight.notification_body,
+        },
+        trigger: null,
+      });
+    }
+  }, [insights.length]);
 
   const handleStartSession = async () => {
     const sessionId = await startSession();
@@ -91,20 +164,26 @@ export default function RecordScreen() {
           {/* Live transcript area */}
           {isRecording ? (
             <>
-              <ScrollView className="flex-1 mb-6 rounded-xl bg-gray-50 p-4">
-                {turns.length === 0 ? (
+              <ScrollView className="mb-6 flex-1 rounded-xl bg-gray-50 p-4">
+                {timeline.length === 0 ? (
                   <Text className="text-center text-gray-400">
                     Listening... Speak to see transcript
                   </Text>
                 ) : (
-                  turns.map((turn, index) => (
+                  timeline.map((item, index) => (
                     <View
-                      key={turn.id}
-                      className={`py-2 ${index !== turns.length - 1 ? 'border-b border-gray-200' : ''}`}
+                      key={item.type === 'turn' ? `turn-${item.data.id}` : `insight-${item.data.id}`}
+                      className={index !== timeline.length - 1 ? 'mb-3' : ''}
                     >
-                      <Text className="text-base leading-relaxed text-gray-800">
-                        {turn.transcript}
-                      </Text>
+                      {item.type === 'turn' ? (
+                        <View className="rounded-xl bg-white px-4 py-3">
+                          <Text className="text-base leading-relaxed text-gray-800">
+                            {item.data.transcript}
+                          </Text>
+                        </View>
+                      ) : (
+                        <InsightCard insight={item.data} />
+                      )}
                     </View>
                   ))
                 )}
@@ -142,8 +221,10 @@ export default function RecordScreen() {
                   isTransitioning ? 'bg-gray-400' : 'bg-[#4b04ff]'
                 }`}
               >
-                {!isTransitioning && <HugeiconsIcon icon={PlayIcon} size={24} color="white" strokeWidth={2} />}
-                <Text className="text-center text-xl font-semibold text-white ml-3">
+                {!isTransitioning && (
+                  <HugeiconsIcon icon={PlayIcon} size={24} color="white" strokeWidth={2} />
+                )}
+                <Text className="ml-3 text-center text-xl font-semibold text-white">
                   {isTransitioning ? 'Starting...' : 'Start Session'}
                 </Text>
               </Pressable>
