@@ -1,12 +1,13 @@
-import { useEffect, useState, useMemo } from 'react';
-import { View, Text, Pressable, ScrollView, TextInput } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useEffect, useState, useMemo, useCallback } from 'react';
+import { View, Text, Pressable, ScrollView, TextInput, ActivityIndicator, Platform } from 'react-native';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { HugeiconsIcon } from '@hugeicons/react-native';
-import { PlayIcon } from '@hugeicons/core-free-icons';
+import { GlassView } from 'expo-glass-effect';
+import { Host, Button, List, Section } from '@expo/ui/swift-ui';
 import * as Notifications from 'expo-notifications';
 import { useRecordingSession } from '../hooks/useRecordingSession';
 import { useAudioRecording } from '../hooks/useAudioRecording';
+import { useSessions } from '../hooks/useSessions';
 import type { Turn, Insight } from '../lib/database.types';
 
 Notifications.setNotificationHandler({
@@ -18,27 +19,25 @@ Notifications.setNotificationHandler({
   }),
 });
 
-type TimelineItem =
-  | { type: 'turn'; data: Turn }
-  | { type: 'insight'; data: Insight };
+type TimelineItem = { type: 'turn'; data: Turn } | { type: 'insight'; data: Insight };
 
 function InsightCard({ insight }: { insight: Insight }) {
   const [expanded, setExpanded] = useState(false);
 
   return (
     <Pressable onPress={() => setExpanded(!expanded)}>
-      <View className="overflow-hidden rounded-xl border border-amber-200 bg-amber-50">
+      <View className="overflow-hidden rounded-xl border border-white/20 bg-white/10">
         <View className="flex-row items-center px-4 py-3">
-          <View className="mr-3 h-2 w-2 rounded-full bg-amber-500" />
+          <View className="mr-3 h-2 w-2 rounded-full bg-yellow-400" />
           <View className="flex-1">
-            <Text className="text-sm font-semibold text-amber-900">{insight.title}</Text>
-            <Text className="mt-0.5 text-sm text-amber-700">{insight.notification_body}</Text>
+            <Text className="text-sm font-semibold text-white">{insight.title}</Text>
+            <Text className="mt-0.5 text-sm text-white/70">{insight.notification_body}</Text>
           </View>
-          <Text className="text-xs text-amber-500">{expanded ? '▲' : '▼'}</Text>
+          <Text className="text-xs text-white/50">{expanded ? '▲' : '▼'}</Text>
         </View>
         {expanded && (
-          <View className="border-t border-amber-200 bg-white px-4 py-3">
-            <Text className="text-sm leading-relaxed text-gray-700">{insight.expanded_body}</Text>
+          <View className="border-t border-white/10 bg-black/20 px-4 py-3">
+            <Text className="text-sm leading-relaxed text-white/80">{insight.expanded_body}</Text>
           </View>
         )}
       </View>
@@ -46,11 +45,19 @@ function InsightCard({ insight }: { insight: Insight }) {
   );
 }
 
-export default function RecordScreen() {
+function formatDate(date: Date): string {
+  return date.toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
+export default function HomeScreen() {
   const router = useRouter();
+  const { sessions, loading: sessionsLoading, refetch } = useSessions();
   const {
     state,
-    currentSession,
     turns,
     insights,
     error,
@@ -66,24 +73,27 @@ export default function RecordScreen() {
 
   const [manualTurnText, setManualTurnText] = useState('');
 
-  // Build timeline by interleaving turns and insights
+  useFocusEffect(
+    useCallback(() => {
+      if (state === 'idle') {
+        refetch();
+      }
+    }, [refetch, state])
+  );
+
   const timeline = useMemo((): TimelineItem[] => {
     const items: TimelineItem[] = [];
-
     for (const turn of turns) {
       items.push({ type: 'turn', data: turn });
     }
-
     for (const insight of insights) {
       items.push({ type: 'insight', data: insight });
     }
-
     items.sort((a, b) => {
       const aTime = new Date(a.data.created_at).getTime();
       const bTime = new Date(b.data.created_at).getTime();
       return aTime - bTime;
     });
-
     return items;
   }, [turns, insights]);
 
@@ -91,7 +101,6 @@ export default function RecordScreen() {
     Notifications.requestPermissionsAsync();
   }, []);
 
-  // Send notification when new insight is generated
   useEffect(() => {
     if (insights.length > 0) {
       const latestInsight = insights[insights.length - 1];
@@ -108,9 +117,6 @@ export default function RecordScreen() {
   const handleStartSession = async () => {
     const sessionId = await startSession();
     if (sessionId) {
-      console.log('Session started:', sessionId);
-
-      // Show notification that session has started
       await Notifications.scheduleNotificationAsync({
         content: {
           title: 'Session Started',
@@ -118,118 +124,185 @@ export default function RecordScreen() {
         },
         trigger: null,
       });
-
-      // Start audio recording after session is created
       await startRecording();
     }
   };
 
   const handleEndSession = async () => {
-    // Stop audio recording first
     await stopRecording();
-    // Then end the session
     await endSession();
-    // Navigate to sessions list after ending
-    router.push('/(sessions)');
   };
 
   const handleSendManualTurn = async () => {
     if (manualTurnText.trim()) {
       await sendManualTurn(manualTurnText);
-      setManualTurnText(''); // Clear input
+      setManualTurnText('');
     }
+  };
+
+  const handleSessionPress = (sessionId: string) => {
+    router.push(`/(sessions)/${sessionId}`);
   };
 
   const isRecording = state === 'recording';
   const isTransitioning = state === 'starting' || state === 'stopping';
 
-  return (
-    <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
-      <View className="flex-1 px-8 pb-24">
-        {/* Header area */}
-        <View className="pt-8 pb-8">
-          <Text className="text-3xl font-bold text-gray-900">
-            {isRecording ? 'Recording' : 'Welcome back, Reed'}
-          </Text>
-          {currentSession && isRecording && (
-            <Text className="mt-2 text-sm text-gray-500">
-              Session ID: {currentSession.id.slice(0, 8)}...
-            </Text>
-          )}
-          {error && <Text className="mt-2 text-sm text-red-500">{error}</Text>}
-        </View>
+  // Recording UI
+  if (isRecording || isTransitioning) {
+    return (
+      <SafeAreaView className="flex-1 bg-primary" edges={['top', 'left', 'right']}>
+        <View className="flex-1 px-6 pb-6">
+          <View className="py-4">
+            <Pressable
+              onPress={handleEndSession}
+              disabled={isTransitioning}
+              className="self-start rounded-full bg-white/20 px-5 py-2"
+            >
+              <Text className="font-medium text-white">back</Text>
+            </Pressable>
+          </View>
 
-        {/* Content area */}
-        <View className="flex-1">
-          {/* Live transcript area */}
-          {isRecording ? (
-            <>
-              <ScrollView className="mb-6 flex-1 rounded-xl bg-gray-50 p-4">
-                {timeline.length === 0 ? (
-                  <Text className="text-center text-gray-400">
-                    Listening... Speak to see transcript
-                  </Text>
-                ) : (
-                  timeline.map((item, index) => (
-                    <View
-                      key={item.type === 'turn' ? `turn-${item.data.id}` : `insight-${item.data.id}`}
-                      className={index !== timeline.length - 1 ? 'mb-3' : ''}
-                    >
-                      {item.type === 'turn' ? (
-                        <View className="rounded-xl bg-white px-4 py-3">
-                          <Text className="text-base leading-relaxed text-gray-800">
-                            {item.data.transcript}
-                          </Text>
-                        </View>
-                      ) : (
-                        <InsightCard insight={item.data} />
-                      )}
-                    </View>
-                  ))
-                )}
-              </ScrollView>
+          {error && <Text className="mb-4 text-sm text-red-300">{error}</Text>}
 
-              <TextInput
-                className="mb-4 rounded-lg border border-gray-300 px-4 py-3"
-                placeholder="Type a turn..."
-                value={manualTurnText}
-                onChangeText={setManualTurnText}
-                onSubmitEditing={handleSendManualTurn}
-                returnKeyType="send"
-              />
-
-              <View className="pb-4">
-                <Pressable
-                  onPress={handleEndSession}
-                  disabled={isTransitioning}
-                  className={`w-full rounded-full px-8 py-5 ${
-                    isTransitioning ? 'bg-gray-400' : 'bg-red-500 active:bg-red-600'
-                  }`}
+          <ScrollView className="mb-4 flex-1">
+            {timeline.length === 0 ? (
+              <Text className="text-center text-white/40">Listening... Speak to see transcript</Text>
+            ) : (
+              timeline.map((item, index) => (
+                <View
+                  key={item.type === 'turn' ? `turn-${item.data.id}` : `insight-${item.data.id}`}
+                  className={index !== timeline.length - 1 ? 'mb-3' : ''}
                 >
-                  <Text className="text-center text-xl font-semibold text-white">
-                    {isTransitioning ? 'Stopping...' : 'Stop Recording'}
-                  </Text>
-                </Pressable>
-              </View>
-            </>
-          ) : (
-            <View>
+                  {item.type === 'turn' ? (
+                    <Text className="text-base leading-relaxed text-white/90">
+                      {item.data.transcript}
+                    </Text>
+                  ) : (
+                    <InsightCard insight={item.data} />
+                  )}
+                </View>
+              ))
+            )}
+          </ScrollView>
+
+          <TextInput
+            className="mb-4 rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-white"
+            placeholder="Type a turn..."
+            placeholderTextColor="rgba(255,255,255,0.4)"
+            value={manualTurnText}
+            onChangeText={setManualTurnText}
+            onSubmitEditing={handleSendManualTurn}
+            returnKeyType="send"
+          />
+
+          <View className="pb-4">
+            {Platform.OS === 'ios' ? (
+              <Host style={{ height: 56 }}>
+                <Button onPress={handleEndSession} disabled={isTransitioning}>
+                  {isTransitioning ? 'Stopping...' : 'end'}
+                </Button>
+              </Host>
+            ) : (
               <Pressable
-                onPress={handleStartSession}
+                onPress={handleEndSession}
                 disabled={isTransitioning}
-                className={`w-full flex-row items-center justify-center rounded-full px-8 py-5 ${
-                  isTransitioning ? 'bg-gray-400' : 'bg-[#4b04ff]'
-                }`}
+                className="w-full rounded-full bg-white/20 px-8 py-4 active:bg-white/30"
               >
-                {!isTransitioning && (
-                  <HugeiconsIcon icon={PlayIcon} size={24} color="white" strokeWidth={2} />
-                )}
-                <Text className="ml-3 text-center text-xl font-semibold text-white">
-                  {isTransitioning ? 'Starting...' : 'Start Session'}
+                <Text className="text-center text-lg font-semibold text-white">
+                  {isTransitioning ? 'Stopping...' : 'end'}
                 </Text>
               </Pressable>
+            )}
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Home UI
+  return (
+    <SafeAreaView className="flex-1 bg-primary" edges={['top', 'left', 'right']}>
+      <View className="flex-1">
+        <View className="px-6 pt-6 pb-4">
+          <Text className="text-3xl font-bold text-white">My Sessions</Text>
+        </View>
+
+        {sessionsLoading ? (
+          <View className="flex-1 items-center justify-center">
+            <ActivityIndicator size="large" color="#fff" />
+          </View>
+        ) : sessions.length === 0 ? (
+          <View className="flex-1 px-6">
+            <Text className="text-lg text-white/50">No sessions yet</Text>
+            <Text className="mt-2 text-white/30">Start a session to begin recording</Text>
+          </View>
+        ) : Platform.OS === 'ios' ? (
+          <View style={{ flex: 1, paddingBottom: 200 }}>
+            <Host style={{ flex: 1 }}>
+              <List listStyle="plain">
+                <Section>
+                  {sessions.map((session) => (
+                    <Button
+                      key={session.id}
+                      variant="plain"
+                      onPress={() => handleSessionPress(session.id)}
+                    >
+                      {session.title || 'Untitled Session'}
+                    </Button>
+                  ))}
+                </Section>
+              </List>
+            </Host>
+          </View>
+        ) : (
+          <ScrollView className="flex-1 px-6" contentContainerStyle={{ paddingBottom: 200 }}>
+            {sessions.map((session) => (
+              <Pressable
+                key={session.id}
+                onPress={() => handleSessionPress(session.id)}
+                className="border-b border-white/20 py-4 active:opacity-70"
+              >
+                <Text className="text-base font-medium text-white">
+                  {session.title || 'Untitled Session'}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        )}
+
+        <View className="absolute bottom-0 left-0 right-0 px-4 pb-8">
+          <GlassView
+            style={{
+              borderRadius: 24,
+              padding: 24,
+              overflow: 'hidden',
+            }}
+            glassStyle="systemChromeMaterialDark"
+          >
+            <Text className="text-2xl font-bold text-white">Welcome back, Reed</Text>
+            <Text className="mt-1 text-base text-white/60">It's {formatDate(new Date())}</Text>
+            <Text className="text-base text-white/60">Let's kill this debate</Text>
+
+            <View className="mt-5 flex-row justify-end">
+              {Platform.OS === 'ios' ? (
+                <Host style={{ height: 48, minWidth: 140 }}>
+                  <Button onPress={handleStartSession} disabled={isTransitioning}>
+                    Start Session
+                  </Button>
+                </Host>
+              ) : (
+                <Pressable
+                  onPress={handleStartSession}
+                  disabled={isTransitioning}
+                  className="rounded-full bg-white/20 px-6 py-3 active:bg-white/30"
+                >
+                  <Text className="font-semibold text-white">
+                    {isTransitioning ? 'Starting...' : 'Start Session'}
+                  </Text>
+                </Pressable>
+              )}
             </View>
-          )}
+          </GlassView>
         </View>
       </View>
     </SafeAreaView>

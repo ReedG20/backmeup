@@ -1,20 +1,26 @@
-import { NativeTabs, Icon, Label } from 'expo-router/unstable-native-tabs';
+import { Stack } from 'expo-router';
 
 import '../global.css';
 
 export default function Layout() {
   return (
-    <NativeTabs>
-      <NativeTabs.Trigger name="index">
-        <Icon src={require('../assets/icons/mic-01-Stroke-Rounded.png')} />
-        <Label>Record</Label>
-      </NativeTabs.Trigger>
-      
-      <NativeTabs.Trigger name="(sessions)">
-        <Icon src={require('../assets/icons/menu-square-Stroke-Rounded.png')} />
-        <Label>Sessions</Label>
-      </NativeTabs.Trigger>
-    </NativeTabs>
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: '#3A20E3' },
+      }}
+    >
+      <Stack.Screen name="index" />
+      <Stack.Screen
+        name="(sessions)"
+        options={{
+          headerShown: true,
+          headerStyle: { backgroundColor: '#3A20E3' },
+          headerTintColor: '#fff',
+          headerBackTitle: 'Sessions',
+        }}
+      />
+    </Stack>
   );
 }
 

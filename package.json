@@ -24,6 +24,7 @@
     "buffer": "^6.0.3",
     "expo": "^54.0.0",
     "expo-constants": "^18.0.12",
+    "expo-glass-effect": "^0.1.8",
     "expo-linking": "^8.0.11",
     "expo-notifications": "~0.32.15",
     "expo-router": "^6.0.21",
