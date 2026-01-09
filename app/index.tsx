@@ -171,7 +171,6 @@ export default function HomeScreen() {
                 <Button
                   variant="borderedProminent"
                   controlSize="large"
-                  color="#ffffff"
                   onPress={handleEndSession}
                   disabled={isTransitioning}
                 >
@@ -246,7 +245,6 @@ export default function HomeScreen() {
                   <Button
                     variant="borderedProminent"
                     controlSize="large"
-                    color="#ffffff"
                     onPress={handleStartSession}
                     disabled={isTransitioning}
                   >

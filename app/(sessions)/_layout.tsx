@@ -6,16 +6,10 @@ export default function SessionsLayout() {
       screenOptions={{
         headerStyle: { backgroundColor: '#3A20E3' },
         headerTintColor: '#fff',
+        headerBackVisible: true,
         contentStyle: { backgroundColor: '#3A20E3' },
       }}
-    >
-      <Stack.Screen
-        name="[id]"
-        options={{
-          headerBackTitle: 'Back',
-        }}
-      />
-    </Stack>
+    />
   );
 }
 
