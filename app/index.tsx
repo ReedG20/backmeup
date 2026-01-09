@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { View, Text, Pressable, ScrollView, TextInput, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, Pressable, ScrollView, ActivityIndicator, Platform } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GlassView } from 'expo-glass-effect';
@@ -64,14 +64,11 @@ export default function HomeScreen() {
     startSession,
     endSession,
     sendAudio,
-    sendManualTurn,
   } = useRecordingSession();
 
   const { startRecording, stopRecording } = useAudioRecording({
     onAudioChunk: sendAudio,
   });
-
-  const [manualTurnText, setManualTurnText] = useState('');
 
   useFocusEffect(
     useCallback(() => {
@@ -133,13 +130,6 @@ export default function HomeScreen() {
     await endSession();
   };
 
-  const handleSendManualTurn = async () => {
-    if (manualTurnText.trim()) {
-      await sendManualTurn(manualTurnText);
-      setManualTurnText('');
-    }
-  };
-
   const handleSessionPress = (sessionId: string) => {
     router.push(`/(sessions)/${sessionId}`);
   };
@@ -174,16 +164,6 @@ export default function HomeScreen() {
               ))
             )}
           </ScrollView>
-
-          <TextInput
-            className="mb-4 rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-white"
-            placeholder="Type a turn..."
-            placeholderTextColor="rgba(255,255,255,0.4)"
-            value={manualTurnText}
-            onChangeText={setManualTurnText}
-            onSubmitEditing={handleSendManualTurn}
-            returnKeyType="send"
-          />
 
           <View className="pb-4">
             {Platform.OS === 'ios' ? (
@@ -250,8 +230,9 @@ export default function HomeScreen() {
 
         <View className="absolute bottom-0 left-0 right-0 px-4 pb-8">
           <GlassView
+            tintColor="#1a0a5c"
             style={{
-              borderRadius: 24,
+              borderRadius: 32,
               padding: 24,
             }}
           >

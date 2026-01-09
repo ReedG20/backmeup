@@ -11,15 +11,7 @@ export default function Layout() {
       }}
     >
       <Stack.Screen name="index" />
-      <Stack.Screen
-        name="(sessions)"
-        options={{
-          headerShown: true,
-          headerStyle: { backgroundColor: '#3A20E3' },
-          headerTintColor: '#fff',
-          headerBackTitle: 'Sessions',
-        }}
-      />
+      <Stack.Screen name="(sessions)" />
     </Stack>
   );
 }
