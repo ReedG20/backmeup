@@ -3,7 +3,7 @@ import { View, Text, Pressable, ScrollView, TextInput, ActivityIndicator, Platfo
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GlassView } from 'expo-glass-effect';
-import { Host, Button, List, Section } from '@expo/ui/swift-ui';
+import { Host, Button } from '@expo/ui/swift-ui';
 import * as Notifications from 'expo-notifications';
 import { useRecordingSession } from '../hooks/useRecordingSession';
 import { useAudioRecording } from '../hooks/useAudioRecording';
@@ -198,8 +198,8 @@ export default function HomeScreen() {
           <View className="pb-4">
             {Platform.OS === 'ios' ? (
               <Host style={{ height: 56 }}>
-                <Button onPress={handleEndSession} disabled={isTransitioning}>
-                  {isTransitioning ? 'Stopping...' : 'end'}
+                <Button variant="borderedProminent" onPress={handleEndSession} disabled={isTransitioning}>
+                  {isTransitioning ? 'Stopping...' : 'End Session'}
                 </Button>
               </Host>
             ) : (
@@ -209,7 +209,7 @@ export default function HomeScreen() {
                 className="w-full rounded-full bg-white/20 px-8 py-4 active:bg-white/30"
               >
                 <Text className="text-center text-lg font-semibold text-white">
-                  {isTransitioning ? 'Stopping...' : 'end'}
+                  {isTransitioning ? 'Stopping...' : 'End Session'}
                 </Text>
               </Pressable>
             )}
@@ -236,33 +236,15 @@ export default function HomeScreen() {
             <Text className="text-lg text-white/50">No sessions yet</Text>
             <Text className="mt-2 text-white/30">Start a session to begin recording</Text>
           </View>
-        ) : Platform.OS === 'ios' ? (
-          <View style={{ flex: 1, paddingBottom: 200 }}>
-            <Host style={{ flex: 1 }}>
-              <List listStyle="plain">
-                <Section>
-                  {sessions.map((session) => (
-                    <Button
-                      key={session.id}
-                      variant="plain"
-                      onPress={() => handleSessionPress(session.id)}
-                    >
-                      {session.title || 'Untitled Session'}
-                    </Button>
-                  ))}
-                </Section>
-              </List>
-            </Host>
-          </View>
         ) : (
-          <ScrollView className="flex-1 px-6" contentContainerStyle={{ paddingBottom: 200 }}>
+          <ScrollView className="flex-1 px-6" contentContainerStyle={{ paddingBottom: 220 }}>
             {sessions.map((session) => (
               <Pressable
                 key={session.id}
                 onPress={() => handleSessionPress(session.id)}
                 className="border-b border-white/20 py-4 active:opacity-70"
               >
-                <Text className="text-base font-medium text-white">
+                <Text className="text-base text-white">
                   {session.title || 'Untitled Session'}
                 </Text>
               </Pressable>
@@ -277,7 +259,7 @@ export default function HomeScreen() {
               padding: 24,
               overflow: 'hidden',
             }}
-            glassStyle="systemChromeMaterialDark"
+            glassStyle="dark"
           >
             <Text className="text-2xl font-bold text-white">Welcome back, Reed</Text>
             <Text className="mt-1 text-base text-white/60">It's {formatDate(new Date())}</Text>
@@ -286,7 +268,11 @@ export default function HomeScreen() {
             <View className="mt-5 flex-row justify-end">
               {Platform.OS === 'ios' ? (
                 <Host style={{ height: 48, minWidth: 140 }}>
-                  <Button onPress={handleStartSession} disabled={isTransitioning}>
+                  <Button
+                    variant="borderedProminent"
+                    onPress={handleStartSession}
+                    disabled={isTransitioning}
+                  >
                     Start Session
                   </Button>
                 </Host>
