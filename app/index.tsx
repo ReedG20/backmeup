@@ -152,19 +152,9 @@ export default function HomeScreen() {
     return (
       <SafeAreaView className="flex-1 bg-primary" edges={['top', 'left', 'right']}>
         <View className="flex-1 px-6 pb-6">
-          <View className="py-4">
-            <Pressable
-              onPress={handleEndSession}
-              disabled={isTransitioning}
-              className="self-start rounded-full bg-white/20 px-5 py-2"
-            >
-              <Text className="font-medium text-white">back</Text>
-            </Pressable>
-          </View>
+          {error && <Text className="mb-4 mt-4 text-sm text-red-300">{error}</Text>}
 
-          {error && <Text className="mb-4 text-sm text-red-300">{error}</Text>}
-
-          <ScrollView className="mb-4 flex-1">
+          <ScrollView className="mb-4 flex-1 pt-4">
             {timeline.length === 0 ? (
               <Text className="text-center text-white/40">Listening... Speak to see transcript</Text>
             ) : (
@@ -174,7 +164,7 @@ export default function HomeScreen() {
                   className={index !== timeline.length - 1 ? 'mb-3' : ''}
                 >
                   {item.type === 'turn' ? (
-                    <Text className="text-base leading-relaxed text-white/90">
+                    <Text className="text-lg leading-relaxed text-white/90">
                       {item.data.transcript}
                     </Text>
                   ) : (
@@ -197,8 +187,14 @@ export default function HomeScreen() {
 
           <View className="pb-4">
             {Platform.OS === 'ios' ? (
-              <Host style={{ height: 56 }}>
-                <Button variant="borderedProminent" onPress={handleEndSession} disabled={isTransitioning}>
+              <Host style={{ height: 60 }}>
+                <Button
+                  variant="borderedProminent"
+                  controlSize="large"
+                  color="#ffffff"
+                  onPress={handleEndSession}
+                  disabled={isTransitioning}
+                >
                   {isTransitioning ? 'Stopping...' : 'End Session'}
                 </Button>
               </Host>
@@ -206,9 +202,9 @@ export default function HomeScreen() {
               <Pressable
                 onPress={handleEndSession}
                 disabled={isTransitioning}
-                className="w-full rounded-full bg-white/20 px-8 py-4 active:bg-white/30"
+                className="w-full rounded-full bg-white px-8 py-4 active:bg-white/80"
               >
-                <Text className="text-center text-lg font-semibold text-white">
+                <Text className="text-center text-lg font-semibold text-primary">
                   {isTransitioning ? 'Stopping...' : 'End Session'}
                 </Text>
               </Pressable>
@@ -244,7 +240,7 @@ export default function HomeScreen() {
                 onPress={() => handleSessionPress(session.id)}
                 className="border-b border-white/20 py-4 active:opacity-70"
               >
-                <Text className="text-base text-white">
+                <Text className="text-lg text-white">
                   {session.title || 'Untitled Session'}
                 </Text>
               </Pressable>
@@ -257,9 +253,7 @@ export default function HomeScreen() {
             style={{
               borderRadius: 24,
               padding: 24,
-              overflow: 'hidden',
             }}
-            glassStyle="dark"
           >
             <Text className="text-2xl font-bold text-white">Welcome back, Reed</Text>
             <Text className="mt-1 text-base text-white/60">It's {formatDate(new Date())}</Text>
@@ -267,9 +261,11 @@ export default function HomeScreen() {
 
             <View className="mt-5 flex-row justify-end">
               {Platform.OS === 'ios' ? (
-                <Host style={{ height: 48, minWidth: 140 }}>
+                <Host style={{ height: 52, minWidth: 160 }}>
                   <Button
                     variant="borderedProminent"
+                    controlSize="large"
+                    color="#ffffff"
                     onPress={handleStartSession}
                     disabled={isTransitioning}
                   >
@@ -280,9 +276,9 @@ export default function HomeScreen() {
                 <Pressable
                   onPress={handleStartSession}
                   disabled={isTransitioning}
-                  className="rounded-full bg-white/20 px-6 py-3 active:bg-white/30"
+                  className="rounded-full bg-white px-6 py-3 active:bg-white/80"
                 >
-                  <Text className="font-semibold text-white">
+                  <Text className="font-semibold text-primary">
                     {isTransitioning ? 'Starting...' : 'Start Session'}
                   </Text>
                 </Pressable>
