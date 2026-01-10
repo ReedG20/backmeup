@@ -8,6 +8,7 @@ import { useRecordingSession } from '../hooks/useRecordingSession';
 import { useAudioRecording } from '../hooks/useAudioRecording';
 import { useSessions } from '../hooks/useSessions';
 import type { Turn, Insight } from '../lib/database.types';
+import BackMeUpLogo from '../assets/backmeup-logo';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -275,7 +276,7 @@ export default function HomeScreen() {
     <SafeAreaView className="flex-1 bg-primary" edges={['top', 'left', 'right']}>
       <View className="flex-1">
         <View className="px-6 pt-6 pb-4">
-          <Text className="text-3xl font-bold text-white">My Sessions</Text>
+          <BackMeUpLogo width={150} height={29} color="#fff" />
         </View>
 
         {sessionsLoading ? (
@@ -312,7 +313,7 @@ export default function HomeScreen() {
                 onPress={handleStartSession}
                 disabled={isTransitioning}
               >
-                Start Session
+                New Session
               </Button>
             </Host>
           ) : (
@@ -322,7 +323,7 @@ export default function HomeScreen() {
               className="rounded-full bg-white px-6 py-3 active:bg-white/80"
             >
               <Text className="font-semibold text-primary">
-                {isTransitioning ? 'Starting...' : 'Start Session'}
+                {isTransitioning ? 'Starting...' : 'New Session'}
               </Text>
             </Pressable>
           )}
