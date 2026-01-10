@@ -159,9 +159,9 @@ export default function HomeScreen() {
 
           <View className="pb-4">
             {Platform.OS === 'ios' ? (
-              <Host style={{ height: 60 }}>
+              <Host style={{ height: 52, minWidth: 160 }}>
                 <Button
-                  variant="borderedProminent"
+                  variant="glass"
                   controlSize="large"
                   onPress={handleEndSession}
                   disabled={isTransitioning}
