@@ -56,6 +56,7 @@ export interface Database {
       sessions: {
         Row: {
           id: string;
+          user_id: string | null;
           title: string | null;
           started_at: string;
           ended_at: string | null;
@@ -66,6 +67,7 @@ export interface Database {
         };
         Insert: {
           id?: string;
+          user_id?: string | null;
           title?: string | null;
           started_at?: string;
           ended_at?: string | null;
@@ -76,6 +78,7 @@ export interface Database {
         };
         Update: {
           id?: string;
+          user_id?: string | null;
           title?: string | null;
           started_at?: string;
           ended_at?: string | null;

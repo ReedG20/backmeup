@@ -81,12 +81,25 @@ export function useRecordingSession(): UseRecordingSessionResult {
     setInsights([]);
     turnCountRef.current = 0;
 
+    // Get current user
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      console.error('[RecordingSession] No authenticated user');
+      setError('You must be signed in to create a session');
+      setState('error');
+      return null;
+    }
+
     // Create session in database
     const { data: sessionData, error: sessionError } = await supabase
       .from('sessions')
       .insert({
         title: title || null,
         started_at: new Date().toISOString(),
+        user_id: user.id,
       })
       .select()
       .single();
