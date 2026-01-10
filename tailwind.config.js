@@ -7,13 +7,6 @@ module.exports = {
     extend: {
       colors: {
         primary: '#3C23FF',
-        navy: {
-          950: '#1a0f5c',
-          900: '#2a1a8a',
-          800: '#3A20E3',
-          700: '#4d35e8',
-          600: '#6b5ced',
-        },
       },
     },
   },

@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { View, Text, Pressable, ScrollView, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, Pressable, ScrollView, ActivityIndicator, Platform, Modal, TextInput } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Host, Button } from '@expo/ui/swift-ui';
@@ -56,7 +56,12 @@ export default function HomeScreen() {
     startSession,
     endSession,
     sendAudio,
+    sendManualTurn,
   } = useRecordingSession();
+
+  // Dev-only manual turn input
+  const [devInputVisible, setDevInputVisible] = useState(false);
+  const [devInputText, setDevInputText] = useState('');
 
   const { startRecording, stopRecording } = useAudioRecording({
     onAudioChunk: sendAudio,
@@ -129,6 +134,14 @@ export default function HomeScreen() {
   const isRecording = state === 'recording';
   const isTransitioning = state === 'starting' || state === 'stopping';
 
+  const handleDevSubmit = async () => {
+    if (devInputText.trim()) {
+      await sendManualTurn(devInputText);
+      setDevInputText('');
+      setDevInputVisible(false);
+    }
+  };
+
   // Recording UI
   if (isRecording || isTransitioning) {
     return (
@@ -157,31 +170,102 @@ export default function HomeScreen() {
             )}
           </ScrollView>
 
-          <View className="pb-4">
+        </View>
+
+        {/* Dev-only Type button - bottom left */}
+        {__DEV__ && (
+          <View className="absolute bottom-8 left-6">
             {Platform.OS === 'ios' ? (
-              <Host style={{ height: 52, minWidth: 160 }}>
+              <Host style={{ height: 52, minWidth: 100 }}>
                 <Button
                   variant="glass"
                   controlSize="large"
-                  onPress={handleEndSession}
-                  disabled={isTransitioning}
+                  onPress={() => setDevInputVisible(true)}
                 >
-                  {isTransitioning ? 'Stopping...' : 'End Session'}
+                  Type
                 </Button>
               </Host>
             ) : (
               <Pressable
-                onPress={handleEndSession}
-                disabled={isTransitioning}
-                className="w-full rounded-full bg-white px-8 py-4 active:bg-white/80"
+                onPress={() => setDevInputVisible(true)}
+                className="rounded-full bg-white px-6 py-3 active:bg-white/80"
               >
-                <Text className="text-center text-lg font-semibold text-primary">
-                  {isTransitioning ? 'Stopping...' : 'End Session'}
-                </Text>
+                <Text className="font-semibold text-primary">Type</Text>
               </Pressable>
             )}
           </View>
+        )}
+
+        {/* End Session button - bottom right */}
+        <View className="absolute bottom-8 right-6">
+          {Platform.OS === 'ios' ? (
+            <Host style={{ height: 52, minWidth: 160 }}>
+              <Button
+                variant="glass"
+                controlSize="large"
+                onPress={handleEndSession}
+                disabled={isTransitioning}
+              >
+                {isTransitioning ? 'Stopping...' : 'End Session'}
+              </Button>
+            </Host>
+          ) : (
+            <Pressable
+              onPress={handleEndSession}
+              disabled={isTransitioning}
+              className="rounded-full bg-white px-6 py-3 active:bg-white/80"
+            >
+              <Text className="font-semibold text-primary">
+                {isTransitioning ? 'Stopping...' : 'End Session'}
+              </Text>
+            </Pressable>
+          )}
         </View>
+
+        {/* Dev-only modal for manual turn input */}
+        {__DEV__ && (
+          <Modal
+              visible={devInputVisible}
+              transparent
+              animationType="fade"
+              onRequestClose={() => setDevInputVisible(false)}
+            >
+              <Pressable
+                className="flex-1 items-center justify-center bg-black/60"
+                onPress={() => setDevInputVisible(false)}
+              >
+                <Pressable
+                  className="mx-6 w-full max-w-sm rounded-2xl bg-primary p-6"
+                  onPress={(e) => e.stopPropagation()}
+                >
+                  <Text className="mb-4 text-lg font-semibold text-white">Add Manual Turn</Text>
+                  <TextInput
+                    className="mb-4 rounded-xl bg-white/10 px-4 py-3 text-white"
+                    placeholder="Enter transcript..."
+                    placeholderTextColor="rgba(255,255,255,0.4)"
+                    value={devInputText}
+                    onChangeText={setDevInputText}
+                    multiline
+                    autoFocus
+                  />
+                  <View className="flex-row gap-3">
+                    <Pressable
+                      onPress={() => setDevInputVisible(false)}
+                      className="flex-1 rounded-xl bg-white/10 py-3"
+                    >
+                      <Text className="text-center text-white">Cancel</Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={handleDevSubmit}
+                      className="flex-1 rounded-xl bg-white py-3"
+                    >
+                      <Text className="text-center font-semibold text-primary">Send</Text>
+                    </Pressable>
+                  </View>
+                </Pressable>
+              </Pressable>
+            </Modal>
+        )}
       </SafeAreaView>
     );
   }
