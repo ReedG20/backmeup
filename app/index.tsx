@@ -223,7 +223,7 @@ export default function HomeScreen() {
           {Platform.OS === 'ios' ? (
             <Host style={{ height: 52, minWidth: 160 }}>
               <Button
-                variant="borderedProminent"
+                variant="glass"
                 controlSize="large"
                 onPress={handleStartSession}
                 disabled={isTransitioning}
