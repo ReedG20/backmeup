@@ -2,7 +2,6 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import { View, Text, Pressable, ScrollView, ActivityIndicator, Platform } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { GlassView } from 'expo-glass-effect';
 import { Host, Button } from '@expo/ui/swift-ui';
 import * as Notifications from 'expo-notifications';
 import { useRecordingSession } from '../hooks/useRecordingSession';
@@ -45,13 +44,6 @@ function InsightCard({ insight }: { insight: Insight }) {
   );
 }
 
-function formatDate(date: Date): string {
-  return date.toLocaleDateString('en-US', {
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-  });
-}
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -212,7 +204,7 @@ export default function HomeScreen() {
             <Text className="mt-2 text-white/30">Start a session to begin recording</Text>
           </View>
         ) : (
-          <ScrollView className="flex-1 px-6" contentContainerStyle={{ paddingBottom: 220 }}>
+          <ScrollView className="flex-1 px-6" contentContainerStyle={{ paddingBottom: 100 }}>
             {sessions.map((session) => (
               <Pressable
                 key={session.id}
@@ -227,43 +219,29 @@ export default function HomeScreen() {
           </ScrollView>
         )}
 
-        <View className="absolute bottom-0 left-0 right-0 px-4 pb-8">
-          <GlassView
-            tintColor="#1a0a5c"
-            style={{
-              borderRadius: 32,
-              padding: 24,
-            }}
-          >
-            <Text className="text-2xl font-bold text-white">Welcome back, Reed</Text>
-            <Text className="mt-1 text-base text-white/60">It's {formatDate(new Date())}</Text>
-            <Text className="text-base text-white/60">Let's kill this debate</Text>
-
-            <View className="mt-5 flex-row justify-end">
-              {Platform.OS === 'ios' ? (
-                <Host style={{ height: 52, minWidth: 160 }}>
-                  <Button
-                    variant="borderedProminent"
-                    controlSize="large"
-                    onPress={handleStartSession}
-                    disabled={isTransitioning}
-                  >
-                    Start Session
-                  </Button>
-                </Host>
-              ) : (
-                <Pressable
-                  onPress={handleStartSession}
-                  disabled={isTransitioning}
-                  className="rounded-full bg-white px-6 py-3 active:bg-white/80"
-                >
-                  <Text className="font-semibold text-primary">
-                    {isTransitioning ? 'Starting...' : 'Start Session'}
-                  </Text>
-                </Pressable>
-              )}
-            </View>
-          </GlassView>
+        <View className="absolute bottom-8 right-6">
+          {Platform.OS === 'ios' ? (
+            <Host style={{ height: 52, minWidth: 160 }}>
+              <Button
+                variant="borderedProminent"
+                controlSize="large"
+                onPress={handleStartSession}
+                disabled={isTransitioning}
+              >
+                Start Session
+              </Button>
+            </Host>
+          ) : (
+            <Pressable
+              onPress={handleStartSession}
+              disabled={isTransitioning}
+              className="rounded-full bg-white px-6 py-3 active:bg-white/80"
+            >
+              <Text className="font-semibold text-primary">
+                {isTransitioning ? 'Starting...' : 'Start Session'}
+              </Text>
+            </Pressable>
+          )}
         </View>
       </View>
     </SafeAreaView>
