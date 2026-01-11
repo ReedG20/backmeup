@@ -190,7 +190,7 @@ export default function HomeScreen() {
           onPress={(e) => e.stopPropagation()}
         >
           <View className="border-b border-white/10 px-6 py-5">
-            <Text className="text-xl font-semibold text-white">Settings</Text>
+            <Text className="text-xl font-semibold text-white">Account</Text>
             {user?.email && (
               <Text className="mt-1 text-sm text-white/60">{user.email}</Text>
             )}
