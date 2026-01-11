@@ -29,6 +29,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.myexpoapp.transcription",
+      "buildNumber": "1",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "This app needs access to your microphone for real-time transcription."
       }
