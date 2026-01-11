@@ -4,9 +4,12 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Host, Button } from '@expo/ui/swift-ui';
 import * as Notifications from 'expo-notifications';
+import { Settings01Icon } from '@hugeicons/core-free-icons';
+import { HugeiconsIcon } from '@hugeicons/react-native';
 import { useRecordingSession } from '../hooks/useRecordingSession';
 import { useAudioRecording } from '../hooks/useAudioRecording';
 import { useSessions } from '../hooks/useSessions';
+import { useAuth } from '../hooks/useAuth';
 import type { Turn, Insight } from '../lib/database.types';
 import BackMeUpLogo from '../assets/backmeup-logo';
 
@@ -48,6 +51,7 @@ function InsightCard({ insight }: { insight: Insight }) {
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { signOut, user } = useAuth();
   const { sessions, loading: sessionsLoading, refetch } = useSessions();
   const {
     state,
@@ -59,6 +63,9 @@ export default function HomeScreen() {
     sendAudio,
     sendManualTurn,
   } = useRecordingSession();
+
+  // Settings modal
+  const [settingsVisible, setSettingsVisible] = useState(false);
 
   // Dev-only manual turn input
   const [devInputVisible, setDevInputVisible] = useState(false);
@@ -143,12 +150,85 @@ export default function HomeScreen() {
     }
   };
 
+  const handleSignOut = async () => {
+    setSettingsVisible(false);
+    await signOut();
+  };
+
+  const SettingsButton = () => (
+    Platform.OS === 'ios' ? (
+      <Host style={{ height: 44, width: 44 }}>
+        <Button
+          variant="glass"
+          systemImage="gearshape"
+          onPress={() => setSettingsVisible(true)}
+        />
+      </Host>
+    ) : (
+      <Pressable
+        onPress={() => setSettingsVisible(true)}
+        className="h-11 w-11 items-center justify-center rounded-full bg-white/15 active:bg-white/25"
+      >
+        <HugeiconsIcon icon={Settings01Icon} size={20} color="#fff" />
+      </Pressable>
+    )
+  );
+
+  const SettingsModal = () => (
+    <Modal
+      visible={settingsVisible}
+      transparent
+      animationType="fade"
+      onRequestClose={() => setSettingsVisible(false)}
+    >
+      <Pressable
+        className="flex-1 items-center justify-center bg-black/60"
+        onPress={() => setSettingsVisible(false)}
+      >
+        <Pressable
+          className="mx-6 w-full max-w-sm overflow-hidden rounded-3xl border border-white/20 bg-primary/95"
+          onPress={(e) => e.stopPropagation()}
+        >
+          <View className="border-b border-white/10 px-6 py-5">
+            <Text className="text-xl font-semibold text-white">Settings</Text>
+            {user?.email && (
+              <Text className="mt-1 text-sm text-white/60">{user.email}</Text>
+            )}
+          </View>
+          <View className="p-4">
+            {Platform.OS === 'ios' ? (
+              <Host style={{ height: 52, width: '100%' }}>
+                <Button
+                  variant="glass"
+                  controlSize="large"
+                  onPress={handleSignOut}
+                >
+                  Sign Out
+                </Button>
+              </Host>
+            ) : (
+              <Pressable
+                onPress={handleSignOut}
+                className="rounded-2xl bg-white/10 py-4 active:bg-white/20"
+              >
+                <Text className="text-center text-base font-medium text-white">Sign Out</Text>
+              </Pressable>
+            )}
+          </View>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+
   // Recording UI
   if (isRecording || isTransitioning) {
     return (
       <SafeAreaView className="flex-1 bg-primary" edges={['top', 'left', 'right']}>
         <View className="flex-1 px-6 pb-6">
-          {error && <Text className="mb-4 mt-4 text-sm text-red-300">{error}</Text>}
+          <View className="flex-row justify-end pt-2 pb-2">
+            <SettingsButton />
+          </View>
+          {error && <Text className="mb-4 text-sm text-red-300">{error}</Text>}
 
           <ScrollView className="mb-4 flex-1 pt-4">
             {timeline.length === 0 ? (
@@ -267,6 +347,8 @@ export default function HomeScreen() {
               </Pressable>
             </Modal>
         )}
+
+        <SettingsModal />
       </SafeAreaView>
     );
   }
@@ -275,8 +357,9 @@ export default function HomeScreen() {
   return (
     <SafeAreaView className="flex-1 bg-primary" edges={['top', 'left', 'right']}>
       <View className="flex-1">
-        <View className="px-6 pt-6 pb-4">
+        <View className="flex-row items-center justify-between px-6 pt-6 pb-4">
           <BackMeUpLogo width={150} height={29} color="#fff" />
+          <SettingsButton />
         </View>
 
         {sessionsLoading ? (
@@ -329,6 +412,8 @@ export default function HomeScreen() {
           )}
         </View>
       </View>
+
+      <SettingsModal />
     </SafeAreaView>
   );
 }
