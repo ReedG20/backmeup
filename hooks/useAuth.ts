@@ -12,7 +12,6 @@ interface UseAuthResult {
   signUpWithEmail: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
-  signInWithApple: () => Promise<void>;
 }
 
 export function useAuth(): UseAuthResult {
@@ -124,54 +123,6 @@ export function useAuth(): UseAuthResult {
     }
   }, []);
 
-  const signInWithApple = useCallback(async () => {
-    try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'apple',
-        options: {
-          redirectTo: 'myexpoapp://auth/callback',
-          skipBrowserRedirect: true,
-        },
-      });
-
-      if (error) {
-        Alert.alert('Apple Sign In Error', error.message);
-        return;
-      }
-
-      if (data?.url) {
-        // Open the OAuth URL in a web browser
-        const result = await WebBrowser.openAuthSessionAsync(
-          data.url,
-          'myexpoapp://auth/callback'
-        );
-
-        if (result.type === 'success' && result.url) {
-          // Parse the URL to extract tokens
-          const url = result.url;
-
-          const hashParams = url.includes('#')
-            ? Object.fromEntries(new URLSearchParams(url.split('#')[1]))
-            : {};
-
-          const queryParams = url.includes('?')
-            ? Object.fromEntries(new URLSearchParams(url.split('?')[1].split('#')[0]))
-            : {};
-
-          const access_token = hashParams.access_token || queryParams.access_token;
-          const refresh_token = hashParams.refresh_token || queryParams.refresh_token;
-
-          if (access_token && refresh_token) {
-            await supabase.auth.setSession({ access_token, refresh_token });
-          }
-        }
-      }
-    } catch (err) {
-      console.error('Apple sign in error:', err);
-      Alert.alert('Error', 'Failed to sign in with Apple');
-    }
-  }, []);
-
   return {
     user,
     session,
@@ -180,6 +131,5 @@ export function useAuth(): UseAuthResult {
     signUpWithEmail,
     signOut,
     signInWithGoogle,
-    signInWithApple,
   };
 }
