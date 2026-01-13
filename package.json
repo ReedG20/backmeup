@@ -1,5 +1,5 @@
 {
-  "name": "my-expo-app",
+  "name": "backmeup",
   "version": "1.0.0",
   "scripts": {
     "android": "expo run:android",

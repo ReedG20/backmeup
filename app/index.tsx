@@ -4,11 +4,11 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Host, Button } from '@expo/ui/swift-ui';
 import * as Notifications from 'expo-notifications';
-import { Settings01Icon } from '@hugeicons/core-free-icons';
+import { UserCircleIcon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import { useRecordingSession } from '../hooks/useRecordingSession';
 import { useAudioRecording } from '../hooks/useAudioRecording';
-import { useSessions } from '../hooks/useSessions';
+import { useSessions, formatDate } from '../hooks/useSessions';
 import { useAuth } from '../hooks/useAuth';
 import type { Turn, Insight } from '../lib/database.types';
 import BackMeUpLogo from '../assets/backmeup-logo';
@@ -160,7 +160,7 @@ export default function HomeScreen() {
       <Host style={{ height: 44, width: 44 }}>
         <Button
           variant="glass"
-          systemImage="gearshape"
+          systemImage="person.circle"
           onPress={() => setSettingsVisible(true)}
         />
       </Host>
@@ -169,7 +169,7 @@ export default function HomeScreen() {
         onPress={() => setSettingsVisible(true)}
         className="h-11 w-11 items-center justify-center rounded-full bg-white/15 active:bg-white/25"
       >
-        <HugeiconsIcon icon={Settings01Icon} size={20} color="#fff" />
+        <HugeiconsIcon icon={UserCircleIcon} size={20} color="#fff" />
       </Pressable>
     )
   );
@@ -380,7 +380,7 @@ export default function HomeScreen() {
                 className="border-b border-white/20 py-4 active:opacity-70"
               >
                 <Text className="text-lg text-white">
-                  {session.title || 'Untitled Session'}
+                  {session.title || formatDate(session.started_at)}
                 </Text>
               </Pressable>
             ))}

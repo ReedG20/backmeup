@@ -16,7 +16,7 @@ import BackMeUpLogo from '../assets/backmeup-logo';
 type AuthMode = 'signin' | 'signup';
 
 export default function Auth() {
-  const { signInWithEmail, signUpWithEmail, signInWithGoogle, signInWithApple } = useAuth();
+  const { signInWithEmail, signUpWithEmail, signInWithGoogle } = useAuth();
   const [mode, setMode] = useState<AuthMode>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -41,15 +41,6 @@ export default function Auth() {
     setLoading(true);
     try {
       await signInWithGoogle();
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAppleSignIn = async () => {
-    setLoading(true);
-    try {
-      await signInWithApple();
     } finally {
       setLoading(false);
     }
@@ -138,30 +129,15 @@ export default function Auth() {
               <View className="h-px flex-1 bg-white/20" />
             </View>
 
-            {/* Social Auth Buttons */}
-            <View className="mb-6 flex-row gap-4">
-              {/* Google Button */}
-              <Pressable
-                onPress={handleGoogleSignIn}
-                disabled={loading}
-                className="flex-1 flex-row items-center justify-center rounded-xl bg-white/10 py-4 active:bg-white/20"
-              >
-                <Text className="text-2xl">G</Text>
-                <Text className="ml-2 font-medium text-white">Google</Text>
-              </Pressable>
-
-              {/* Apple Button */}
-              {Platform.OS === 'ios' && (
-                <Pressable
-                  onPress={handleAppleSignIn}
-                  disabled={loading}
-                  className="flex-1 flex-row items-center justify-center rounded-xl bg-white/10 py-4 active:bg-white/20"
-                >
-                  <Text className="text-2xl text-white"></Text>
-                  <Text className="ml-2 font-medium text-white">Apple</Text>
-                </Pressable>
-              )}
-            </View>
+            {/* Social Auth Button */}
+            <Pressable
+              onPress={handleGoogleSignIn}
+              disabled={loading}
+              className="mb-6 flex-row items-center justify-center rounded-xl bg-white/10 py-4 active:bg-white/20"
+            >
+              <Text className="text-2xl">G</Text>
+              <Text className="ml-2 font-medium text-white">Google</Text>
+            </Pressable>
 
             {/* Toggle Mode */}
             <View className="flex-row justify-center">
