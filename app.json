@@ -28,7 +28,7 @@
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.myexpoapp.transcription",
+      "bundleIdentifier": "com.backmeupapp.ios",
       "buildNumber": "1",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "This app needs access to your microphone for real-time transcription."
