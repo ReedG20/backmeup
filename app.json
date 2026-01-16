@@ -4,34 +4,34 @@
     "slug": "backmeup",
     "version": "1.0.0",
     "scheme": "myexpoapp",
-
     "web": {
       "favicon": "./assets/favicon.png"
     },
-
     "experiments": {
       "tsconfigPaths": true
     },
-
-    "plugins": ["expo-router", "@siteed/expo-audio-studio"],
-
+    "plugins": [
+      "expo-router",
+      "@siteed/expo-audio-studio"
+    ],
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-
     "userInterfaceStyle": "light",
-
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.backmeupapp.ios",
       "buildNumber": "1",
       "infoPlist": {
-        "NSMicrophoneUsageDescription": "This app needs access to your microphone for real-time transcription."
+        "NSMicrophoneUsageDescription": "This app needs access to your microphone for real-time transcription.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -40,7 +40,15 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "permissions": ["android.permission.RECORD_AUDIO"]
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "46a0cba2-4ca6-4349-aa71-7e15fdbe7d87"
+      }
     }
   }
 }
